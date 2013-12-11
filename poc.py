@@ -1,12 +1,23 @@
 #! /usr/bin/env python
 # -*- coding: utf-8
 import sys
+
 import numpy
-import scipy, scipy.fftpack
 from numpy import pi, sin, cos
 from scipy.optimize import leastsq
+import scipy, scipy.fftpack
 
 import cv2
+import cv2.cv as cv
+
+def logpolar(src, center, magnitude_scale = 40):
+
+    mat1 = cv.fromarray(numpy.float64(src))
+    mat2 = cv.CreateMat(src.shape[0], src.shape[1], mat1.type)
+
+    cv.LogPolar(mat1, mat2, center, magnitude_scale)
+
+    return numpy.asarray(mat2)
 
 def zero_padding(src, dstshape, pos = (0, 0)):
     y, x = pos
@@ -19,7 +30,6 @@ def pocfunc_model(alpha, delta1, delta2, r, u):
     V1, V2 = map(lambda x: 2 * x + 1, u)
     return lambda n1, n2: alpha / (N1 * N2) * sin((n1 + delta1) * V1 / N1 * pi) * sin((n2 + delta2) * V2 / N2 * pi)\
                                             / (sin((n1 + delta1) * pi / N1) * sin((n2 + delta2) * pi / N2))
-
 
 def pocfunc(f, g, windowfunc = numpy.hanning, withlpf = True):
     m = numpy.floor(map(lambda x: x / 2.0, f.shape))
