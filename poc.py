@@ -10,12 +10,15 @@ import scipy, scipy.fftpack
 import cv2
 import cv2.cv as cv
 
+import matplotlib.pyplot as plt
+
 def logpolar(src, center, magnitude_scale = 40):
 
     mat1 = cv.fromarray(numpy.float64(src))
     mat2 = cv.CreateMat(src.shape[0], src.shape[1], mat1.type)
 
-    cv.LogPolar(mat1, mat2, center, magnitude_scale)
+    cv.LogPolar(mat1, mat2, center, magnitude_scale, \
+                cv.CV_INTER_CUBIC+cv.CV_WARP_FILL_OUTLIERS)
 
     return numpy.asarray(mat2)
 
@@ -31,7 +34,7 @@ def pocfunc_model(alpha, delta1, delta2, r, u):
     return lambda n1, n2: alpha / (N1 * N2) * sin((n1 + delta1) * V1 / N1 * pi) * sin((n2 + delta2) * V2 / N2 * pi)\
                                             / (sin((n1 + delta1) * pi / N1) * sin((n2 + delta2) * pi / N2))
 
-def pocfunc(f, g, windowfunc = numpy.hanning, withlpf = True):
+def pocfunc(f, g, windowfunc = numpy.hanning, withlpf = False):
     m = numpy.floor(map(lambda x: x / 2.0, f.shape))
     u = map(lambda x: x / 2.0, m)
 
@@ -65,14 +68,10 @@ def poc(f, g, fitting_shape = (9, 9)):
 
     r = pocfunc(f, g)
 
-    print r
-
     # least-square fitting
     max_pos = numpy.argmax(r)
     peak = (max_pos / f.shape[1], max_pos % f.shape[1])
     max_peak = r[peak[0], peak[1]]
-
-    print peak
 
     mf = numpy.floor(map(lambda x: x / 2.0, fitting_shape))
     fitting_area = r[peak[0] - mf[0] : peak[0] + mf[0] + 1,\
@@ -86,11 +85,35 @@ def poc(f, g, fitting_shape = (9, 9)):
     plsq = leastsq(errorfunction, p0)
     return (plsq[0][0], plsq[0][1], plsq[0][2])
 
+def ripoc(f, g, M = 50, fitting_shape = (9, 9)):
 
-if __name__ == '__main__':
+    hy = numpy.hanning(f.shape[0])
+    hx = numpy.hanning(f.shape[1])
+    hw = hy.reshape(hy.shape[0], 1) * hx
 
-    img1 = cv2.imread(sys.argv[1], 0)
-    img2 = cv2.imread(sys.argv[2], 0)
+    ff = f * hw
+    gg = g * hw
 
-    print poc(img1, img2)
+    F = scipy.fftpack.fft2(ff)
+    G = scipy.fftpack.fft2(gg)
+
+    F = scipy.fftpack.fftshift(numpy.log(numpy.abs(F)))
+    G = scipy.fftpack.fftshift(numpy.log(numpy.abs(G)))
+
+    FLP = logpolar(F, (F.shape[0] / 2, F.shape[1] / 2), M)
+    GLP = logpolar(G, (G.shape[0] / 2, G.shape[1] / 2), M)
+
+    R = poc(FLP, GLP)
+
+    angle = -R[1] / F.shape[0] * 360
+    scale = 1.0 - R[2] / 100
+
+    center = tuple(numpy.array(g.shape) / 2)
+    rot = cv2.getRotationMatrix2D(center, -angle, 1.0 + (1.0 - scale))
+
+    g_dash = cv2.warpAffine(g, rot, (g.shape[1], g.shape[0]), flags=cv2.INTER_LANCZOS4)
+
+    t = poc(f, g_dash)
+
+    return (t[1], t[2], angle, scale)
 
