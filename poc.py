@@ -8,17 +8,11 @@ from scipy.optimize import leastsq
 import scipy, scipy.fftpack
 
 import cv2
-import cv2.cv as cv
-
-def logpolar(src, center, magnitude_scale = 40):
-
-    mat1 = cv.fromarray(numpy.float64(src))
-    mat2 = cv.CreateMat(src.shape[0], src.shape[1], mat1.type)
-
-    cv.LogPolar(mat1, mat2, center, magnitude_scale, \
-                cv.CV_INTER_CUBIC+cv.CV_WARP_FILL_OUTLIERS)
-
-    return numpy.asarray(mat2)
+if cv2.__version__[0] == '2':
+    import cv2.cv as cv
+    from logpolar_opencv2 import *
+else:
+    from logpolar_opencv3 import *
 
 def zero_padding(src, dstshape, pos = (0, 0)):
     y, x = pos
