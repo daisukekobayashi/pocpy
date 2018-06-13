@@ -1,5 +1,5 @@
-#! /usr/bin/env python
-# -*- coding: utf-8
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 import sys
 
 import numpy
@@ -9,8 +9,6 @@ import scipy, scipy.fftpack
 
 import cv2
 import cv2.cv as cv
-
-import matplotlib.pyplot as plt
 
 def logpolar(src, center, magnitude_scale = 40):
 
@@ -73,7 +71,7 @@ def poc(f, g, fitting_shape = (9, 9)):
     peak = (max_pos / f.shape[1], max_pos % f.shape[1])
     max_peak = r[peak[0], peak[1]]
 
-    mf = numpy.floor(map(lambda x: x / 2.0, fitting_shape))
+    mf = map(lambda x: x / 2, fitting_shape)
     fitting_area = r[peak[0] - mf[0] : peak[0] + mf[0] + 1,\
                      peak[1] - mf[1] : peak[1] + mf[1] + 1]
 
