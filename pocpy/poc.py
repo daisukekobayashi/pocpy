@@ -120,4 +120,4 @@ def ripoc(f, g, M=50, fitting_shape=(9, 9)):
 
     t = poc(f, g_dash)
 
-    return (t[1], t[2], angle, scale)
+    return (t[0], t[1], t[2], angle, scale)
