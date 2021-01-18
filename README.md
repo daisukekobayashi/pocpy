@@ -1,2 +1,3 @@
-phase-only-correlation
-======================
+# pocpy (Phase Only Correlation in Python)
+
+This repository contains implementations of phase only correlation and rotation invariant phase only correlation in python.
