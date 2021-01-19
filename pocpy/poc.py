@@ -34,7 +34,7 @@ def pocfunc_model(alpha, delta1, delta2, r, u):
     )
 
 
-def pocfunc(f, g, windowfunc=np.hanning, withlpf=False):
+def pocfunc(f, g, withlpf=False, windowfunc=np.hanning):
     m = np.floor(list(six.moves.map(lambda x: x / 2.0, f.shape)))
     u = list(six.moves.map(lambda x: x / 2.0, m))
 
@@ -61,13 +61,13 @@ def pocfunc(f, g, windowfunc=np.hanning, withlpf=False):
     return scipy.fftpack.fftshift(np.real(scipy.fftpack.ifft2(R)))
 
 
-def poc(f, g, fitting_shape=(9, 9)):
+def poc(f, g, withlpf=False, fitting_shape=(9, 9)):
     # compute phase-only correlation
     center = list(six.moves.map(lambda x: x / 2.0, f.shape))
     m = np.floor(list(six.moves.map(lambda x: x / 2.0, f.shape)))
     u = list(six.moves.map(lambda x: x / 2.0, m))
 
-    r = pocfunc(f, g)
+    r = pocfunc(f, g, withlpf=withlpf)
 
     # least-square fitting
     max_pos = np.argmax(r)
@@ -90,7 +90,7 @@ def poc(f, g, fitting_shape=(9, 9)):
     return (plsq[0][0], plsq[0][1], plsq[0][2])
 
 
-def ripoc(f, g, M=50, fitting_shape=(9, 9)):
+def ripoc(f, g, withlpf=False, fitting_shape=(9, 9), M=50):
 
     hy = np.hanning(f.shape[0])
     hx = np.hanning(f.shape[1])
@@ -108,7 +108,7 @@ def ripoc(f, g, M=50, fitting_shape=(9, 9)):
     FLP = logpolar(F, (F.shape[0] / 2, F.shape[1] / 2), M)
     GLP = logpolar(G, (G.shape[0] / 2, G.shape[1] / 2), M)
 
-    R = poc(FLP, GLP)
+    R = poc(FLP, GLP, withlpf=withlpf)
 
     angle = -R[1] / F.shape[0] * 360
     scale = 1.0 - R[2] / 100
