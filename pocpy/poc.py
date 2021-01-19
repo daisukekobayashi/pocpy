@@ -53,8 +53,8 @@ def pocfunc(f, g, windowfunc=np.hanning, withlpf=False):
 
     if withlpf == True:
         R = scipy.fftpack.fftshift(R)
-        lpf = np.ones(list(six.moves.map(lambda x: x + 1.0, m)))
-        lpf = zero_padding(lpf, f.shape, u)
+        lpf = np.ones(list(six.moves.map(lambda x: int(x + 1), m)))
+        lpf = zero_padding(lpf, f.shape, list(six.moves.map(int, u)))
         R = R * lpf
         R = scipy.fftpack.fftshift(R)
 
