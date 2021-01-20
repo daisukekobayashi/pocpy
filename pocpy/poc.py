@@ -118,6 +118,6 @@ def ripoc(f, g, withlpf=False, fitting_shape=(9, 9), M=50):
 
     g_dash = cv2.warpAffine(g, rot, (g.shape[1], g.shape[0]), flags=cv2.INTER_LANCZOS4)
 
-    t = poc(f, g_dash)
+    t = poc(f, g_dash, withlpf=withlpf)
 
     return (t[0], t[1], t[2], angle, scale)
