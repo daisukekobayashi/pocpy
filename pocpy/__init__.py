@@ -1,3 +1,3 @@
-from pocpy.poc import pocfunc
-from pocpy.poc import poc
-from pocpy.poc import ripoc
+from pocpy.poc import poc, pocfunc, ripoc
+
+__all__ = ["poc", "pocfunc", "ripoc"]
