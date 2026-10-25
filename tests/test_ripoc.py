@@ -7,7 +7,9 @@ from conftest import crop, rotate_scale, shift
 import pocpy
 
 
-@pytest.mark.parametrize("angle", [0, 10, -15, 30])
+@pytest.mark.parametrize(
+    "angle", [0, 10, -15, 30, 95, 120, 170, -100, -150, 179]
+)
 def test_ripoc_estimates_rotation(texture, angle):
     _, dy, dx, est_angle, scale = pocpy.ripoc(
         crop(texture), crop(rotate_scale(texture, angle, 1.0))
@@ -18,7 +20,9 @@ def test_ripoc_estimates_rotation(texture, angle):
     assert dx == pytest.approx(0, abs=0.2)
 
 
-@pytest.mark.parametrize(("angle", "dy", "dx"), [(10, 3, -5), (-20, -6, 4)])
+@pytest.mark.parametrize(
+    ("angle", "dy", "dx"), [(10, 3, -5), (-20, -6, 4), (120, 3, -5)]
+)
 def test_ripoc_estimates_translation_before_rotation(texture, angle, dy, dx):
     # g is f translated by (dy, dx) and then rotated about the center.
     g = rotate_scale(shift(texture, dy, dx), angle, 1.0)
@@ -29,7 +33,8 @@ def test_ripoc_estimates_translation_before_rotation(texture, angle, dy, dx):
 
 
 @pytest.mark.parametrize(
-    ("angle", "scale"), [(0, 1.1), (0, 0.9), (12, 0.9), (-8, 1.05)]
+    ("angle", "scale"),
+    [(0, 1.1), (0, 0.9), (12, 0.9), (-8, 1.05), (-89, 0.9), (-135, 1.1)],
 )
 def test_ripoc_estimates_scale(texture, angle, scale):
     _, _, _, est_angle, est_scale = pocpy.ripoc(
@@ -61,7 +66,7 @@ def test_ripoc_passes_fitting_shape_to_poc(texture, monkeypatch):
 
     monkeypatch.setattr(module, "poc", spy)
     pocpy.ripoc(crop(texture), crop(texture), fitting_shape=(7, 7))
-    assert calls == [(7, 7), (7, 7)]
+    assert calls and all(c == (7, 7) for c in calls)
 
 
 @pytest.mark.parametrize(

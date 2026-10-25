@@ -116,7 +116,8 @@ def ripoc(
 ) -> tuple[float, float, float, float, float]:
     """Estimate translation, rotation and scale of `g` relative to `f`.
 
-    Returns `(peak, dy, dx, angle, scale)`. `angle` is in degrees.
+    Returns `(peak, dy, dx, angle, scale)`. `angle` is in degrees,
+    between -180 and 180.
     `M` is the log-polar magnitude scale; by default it is chosen so
     that the spectrum fills the log-polar image.
     """
@@ -154,12 +155,18 @@ def ripoc(
 
     # OpenCV takes the center as (x, y)
     center = (g.shape[1] / 2, g.shape[0] / 2)
-    rot = cv2.getRotationMatrix2D(center, -angle, 1.0 / scale)
 
-    g_dash = cv2.warpAffine(
-        g, rot, (g.shape[1], g.shape[0]), flags=cv2.INTER_LANCZOS4
-    )
-
-    t = poc(f, g_dash, withlpf=withlpf, fitting_shape=fitting_shape)
+    # The amplitude spectrum cannot tell angle from angle + 180, so undo
+    # both and keep the one with the higher correlation peak.
+    best = None
+    for a in (angle, angle - 180 if angle > 0 else angle + 180):
+        rot = cv2.getRotationMatrix2D(center, -a, 1.0 / scale)
+        g_dash = cv2.warpAffine(
+            g, rot, (g.shape[1], g.shape[0]), flags=cv2.INTER_LANCZOS4
+        )
+        t = poc(f, g_dash, withlpf=withlpf, fitting_shape=fitting_shape)
+        if best is None or t[0] > best[0][0]:
+            best = (t, a)
+    t, angle = best
 
     return (t[0], t[1], t[2], angle, scale)

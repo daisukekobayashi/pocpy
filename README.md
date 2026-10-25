@@ -33,8 +33,7 @@ peak, dy, dx, angle, scale = pocpy.ripoc(f, g)
   scaled by `scale` about the image center.
 - `peak` is the height of the correlation peak and can be used as a
   similarity measure.
-- Rotation is estimated within ±90 degrees, because the amplitude spectrum
-  used by `ripoc` cannot distinguish `angle` from `angle ± 180`.
+- `angle` is between -180 and 180 degrees.
 
 ## Development
 
