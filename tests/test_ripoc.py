@@ -1,15 +1,7 @@
-import cv2
 import pytest
 from conftest import crop, rotate_scale, shift
 
 import pocpy
-
-pytestmark = pytest.mark.xfail(
-    not hasattr(cv2, "logPolar"),
-    raises=AttributeError,
-    strict=True,
-    reason="cv2.logPolar was removed in OpenCV 5",
-)
 
 scale_bug = pytest.mark.xfail(
     strict=True,
