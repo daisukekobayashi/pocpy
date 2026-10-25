@@ -1,0 +1,38 @@
+[project]
+name = "pocpy"
+version = "0.2.0"
+description = "Phase Only Correlation in Python"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Daisuke Kobayashi", email = "daisuke@daisukekobayashi.com" }]
+keywords = ["registration", "phase-only-correlation"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Image Processing",
+]
+requires-python = ">=3.10"
+dependencies = ["six", "numpy", "scipy", "opencv-python"]
+
+[project.urls]
+Homepage = "https://github.com/daisukekobayashi/pocpy"
+
+[dependency-groups]
+dev = ["pytest", "ruff"]
+
+[build-system]
+requires = ["uv_build>=0.13.5,<0.14"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = ""
+
+[tool.ruff]
+line-length = 79
+
+[tool.ruff.lint]
+extend-select = ["I", "W"]
+
+[tool.ruff.lint.pycodestyle]
+max-doc-length = 72
