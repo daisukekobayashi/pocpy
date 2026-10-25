@@ -7,9 +7,10 @@ SIZE = 512
 CROP = 128
 
 
-def crop(img):
-    c = SIZE // 2
-    return img[c - CROP : c + CROP, c - CROP : c + CROP]
+def crop(img, height=2 * CROP, width=2 * CROP):
+    """Crop a `height` x `width` region around the center."""
+    top, left = (SIZE - height) // 2, (SIZE - width) // 2
+    return img[top : top + height, left : left + width]
 
 
 def shift(img, dy, dx):

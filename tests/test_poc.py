@@ -47,11 +47,9 @@ def test_poc_non_square(texture):
     assert dx == pytest.approx(-6, abs=0.1)
 
 
-@pytest.mark.xfail(
-    raises=ValueError,
-    strict=True,
-    reason="fitting area is cut off when the peak is near the border",
-)
-def test_poc_peak_near_border(texture):
-    _, dy, _ = pocpy.poc(crop(texture), crop(np.roll(texture, 126, axis=0)))
-    assert dy == pytest.approx(126, abs=0.5)
+@pytest.mark.parametrize("dy", [124, 126, 127])
+def test_poc_peak_near_border(texture, dy):
+    # The overlap is tiny, so only check the fit stays near the peak.
+    g = np.roll(texture, dy, axis=0)
+    _, est_dy, _ = pocpy.poc(crop(texture), crop(g))
+    assert est_dy == pytest.approx(dy, abs=1)
