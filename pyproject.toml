@@ -1,6 +1,6 @@
 [project]
 name = "pocpy"
-version = "0.3.1"
+version = "0.3.2"
 description = "Phase Only Correlation in Python"
 readme = "README.md"
 license = "MIT"
