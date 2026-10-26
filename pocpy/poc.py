@@ -1,3 +1,34 @@
+"""Phase-only correlation (POC) and rotation invariant POC (RIPOC).
+
+This is an unofficial implementation of:
+
+    K. Takita, T. Aoki, Y. Sasaki, T. Higuchi, and K. Kobayashi,
+    "High-accuracy subpixel image registration based on phase-only
+    correlation," IEICE Trans. Fundamentals, vol. E86-A, no. 8,
+    pp. 1925-1934, Aug. 2003.
+
+`poc` follows Sections 2-3 and `ripoc` follows Section 5. Names
+follow the paper where possible:
+
+    f, g      input images f(n1, n2), g(n1, n2)
+    F, G      their 2D DFTs F(k1, k2), G(k1, k2)
+    R         cross-phase spectrum R(k1, k2)
+    r         POC function r(n1, n2)
+    alpha     peak height
+    delta1/2  sub-pixel displacement
+    FLP, GLP  log-polar mappings of the amplitude spectra
+
+Differences from the paper:
+
+- The peak model uses V = 2u + 1 (about N/2) instead of N. The
+  Hanning window narrows the effective band, and the full-band model
+  was measured to be less accurate.
+- `ripoc` maps angles over 0 to 2 pi instead of 0 to pi, and resolves
+  the 180 degree ambiguity of the amplitude spectrum by trying both
+  candidates.
+- `ripoc` zero-pads non-square images to a square.
+"""
+
 from collections.abc import Callable
 
 import cv2
@@ -25,6 +56,12 @@ def zero_padding(src, dstshape, pos=(0, 0)):
     return dst
 
 
+def _window2d(shape, windowfunc=np.hanning):
+    hy = windowfunc(shape[0])
+    hx = windowfunc(shape[1])
+    return hy.reshape(hy.shape[0], 1) * hx
+
+
 def pocfunc_model(alpha, delta1, delta2, r, u):
     N1, N2 = r.shape
     V1, V2 = (2 * x + 1 for x in u)
@@ -47,12 +84,9 @@ def pocfunc(
     m = np.floor(np.array(f.shape) / 2.0)
     u = m / 2.0
 
-    # hanning window
-    hy = windowfunc(f.shape[0])
-    hx = windowfunc(f.shape[1])
-    hw = hy.reshape(hy.shape[0], 1) * hx
-    f = f * hw
-    g = g * hw
+    window = _window2d(f.shape, windowfunc)
+    f = f * window
+    g = g * window
 
     # compute 2d fft
     F = fft.fft2(f)
@@ -88,14 +122,14 @@ def poc(
     # least-square fitting
     peak = np.unravel_index(np.argmax(r), r.shape)
 
-    mf = [x // 2 for x in fitting_shape]
+    half = [x // 2 for x in fitting_shape]
     # r is periodic, so wrap around the border instead of truncating
-    rows = np.arange(peak[0] - mf[0], peak[0] + mf[0] + 1) % r.shape[0]
-    cols = np.arange(peak[1] - mf[1], peak[1] + mf[1] + 1) % r.shape[1]
+    rows = np.arange(peak[0] - half[0], peak[0] + half[0] + 1) % r.shape[0]
+    cols = np.arange(peak[1] - half[1], peak[1] + half[1] + 1) % r.shape[1]
     fitting_area = r[np.ix_(rows, cols)]
 
     p0 = [0.5, -(peak[0] - m[0]) - 0.02, -(peak[1] - m[1]) - 0.02]
-    y, x = np.mgrid[-mf[0] : mf[0] + 1, -mf[1] : mf[1] + 1]
+    y, x = np.mgrid[-half[0] : half[0] + 1, -half[1] : half[1] + 1]
     y = y + peak[0] - m[0]
     x = x + peak[1] - m[1]
 
@@ -105,6 +139,41 @@ def poc(
 
     plsq = leastsq(errorfunction, p0)
     return (plsq[0][0], plsq[0][1], plsq[0][2])
+
+
+def _estimate_rotation_scale(f, g, M, withlpf, fitting_shape):
+    # zero-pad to a square so both axes share the same frequency step
+    n = max(f.shape)
+    if M is None:
+        M = n / np.log(n / 2)
+
+    window = _window2d(f.shape)
+    F = fft.fft2(f * window, s=(n, n))
+    G = fft.fft2(g * window, s=(n, n))
+
+    F = fft.fftshift(np.log(np.abs(F)))
+    G = fft.fftshift(np.log(np.abs(G)))
+
+    FLP = logpolar(F, (n / 2, n / 2), M)
+    GLP = logpolar(G, (n / 2, n / 2), M)
+
+    _, d_angle, d_logr = poc(
+        FLP, GLP, withlpf=withlpf, fitting_shape=fitting_shape
+    )
+
+    angle = -d_angle / n * 360
+    # logpolar maps radius r to M * log(r)
+    scale = np.exp(-d_logr / M)
+    return angle, scale
+
+
+def _undo_rotation_scale(g, angle, scale):
+    # OpenCV takes the center as (x, y)
+    center = (g.shape[1] / 2, g.shape[0] / 2)
+    rot = cv2.getRotationMatrix2D(center, -angle, 1.0 / scale)
+    return cv2.warpAffine(
+        g, rot, (g.shape[1], g.shape[0]), flags=cv2.INTER_LANCZOS4
+    )
 
 
 def ripoc(
@@ -126,47 +195,16 @@ def ripoc(
             f"f and g must have the same shape, got {f.shape} and {g.shape}"
         )
 
-    # zero-pad to a square so both axes share the same frequency step
-    n = max(f.shape)
-    if M is None:
-        M = n / np.log(n / 2)
-
-    hy = np.hanning(f.shape[0])
-    hx = np.hanning(f.shape[1])
-    hw = hy.reshape(hy.shape[0], 1) * hx
-
-    ff = f * hw
-    gg = g * hw
-
-    F = fft.fft2(ff, s=(n, n))
-    G = fft.fft2(gg, s=(n, n))
-
-    F = fft.fftshift(np.log(np.abs(F)))
-    G = fft.fftshift(np.log(np.abs(G)))
-
-    FLP = logpolar(F, (n / 2, n / 2), M)
-    GLP = logpolar(G, (n / 2, n / 2), M)
-
-    R = poc(FLP, GLP, withlpf=withlpf, fitting_shape=fitting_shape)
-
-    angle = -R[1] / n * 360
-    # logpolar maps radius r to M * log(r)
-    scale = np.exp(-R[2] / M)
-
-    # OpenCV takes the center as (x, y)
-    center = (g.shape[1] / 2, g.shape[0] / 2)
+    angle, scale = _estimate_rotation_scale(f, g, M, withlpf, fitting_shape)
 
     # The amplitude spectrum cannot tell angle from angle + 180, so undo
     # both and keep the one with the higher correlation peak.
     best = None
     for a in (angle, angle - 180 if angle > 0 else angle + 180):
-        rot = cv2.getRotationMatrix2D(center, -a, 1.0 / scale)
-        g_dash = cv2.warpAffine(
-            g, rot, (g.shape[1], g.shape[0]), flags=cv2.INTER_LANCZOS4
-        )
-        t = poc(f, g_dash, withlpf=withlpf, fitting_shape=fitting_shape)
-        if best is None or t[0] > best[0][0]:
-            best = (t, a)
-    t, angle = best
+        g_dash = _undo_rotation_scale(g, a, scale)
+        shift = poc(f, g_dash, withlpf=withlpf, fitting_shape=fitting_shape)
+        if best is None or shift[0] > best[0][0]:
+            best = (shift, a)
+    shift, angle = best
 
-    return (t[0], t[1], t[2], angle, scale)
+    return (shift[0], shift[1], shift[2], angle, scale)
