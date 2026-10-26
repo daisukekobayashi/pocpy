@@ -2,6 +2,14 @@
 
 This repository contains implementations of phase only correlation and rotation invariant phase only correlation in python.
 
+This is an unofficial implementation of the paper below. `poc` follows
+Sections 2-3 and `ripoc` follows Section 5.
+
+> K. Takita, T. Aoki, Y. Sasaki, T. Higuchi, and K. Kobayashi,
+> "High-accuracy subpixel image registration based on phase-only
+> correlation," IEICE Trans. Fundamentals, vol. E86-A, no. 8,
+> pp. 1925-1934, Aug. 2003.
+
 ## Installing pocpy
 
 ```console
