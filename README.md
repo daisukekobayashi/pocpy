@@ -16,6 +16,10 @@ Sections 2-3 and `ripoc` follows Section 5.
 $ pip install pocpy
 ```
 
+pocpy depends on `opencv-python-headless`. If you also need OpenCV's GUI
+functions such as `cv2.imshow`, install `opencv-python` and uninstall
+`opencv-python-headless`, since the two packages conflict.
+
 ## Usage
 
 ```python
